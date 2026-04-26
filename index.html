@@ -445,9 +445,7 @@
       </div>
       <h2 class="status-headline" id="status-headline">Your inbox is open.</h2>
       <p class="status-sub" id="status-sub">New emails land normally.</p>
-      <div id="held-count" style="display:none" class="held-count">
-        <span id="held-count-text"></span>
-      </div>
+
       <button class="toggle-btn action-pause" id="main-btn" onclick="handleToggle()">
         ⏸ Pause Inbox
       </button>
@@ -540,7 +538,7 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const CLIENT_ID   = '948980601473-4tpqjeegq5fth015mul0k67ukdpn60pf.apps.googleusercontent.com';
 const REDIRECT    = 'https://barnabarna.github.io/inbox-pause/';
-const SCOPES      = 'https://www.googleapis.com/auth/gmail.modify';
+const SCOPES      = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.insert';
 const PAUSE_LABEL = 'Inbox Pause';
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -650,12 +648,7 @@ async function checkState() {
   filterId = pf?.id || null;
   paused   = !!pf;
 
-  if (paused) {
-    const md = await gapi('GET', `/users/me/messages?labelIds=${labelId}&maxResults=1`);
-    heldCount = md.resultSizeEstimate || 0;
-  } else {
-    heldCount = 0;
-  }
+  heldCount = 0;
 }
 
 // ── Pause signal email ────────────────────────────────────────────────────────
@@ -832,30 +825,21 @@ function updateUI() {
   const headline  = document.getElementById('status-headline');
   const sub       = document.getElementById('status-sub');
   const btn       = document.getElementById('main-btn');
-  const held      = document.getElementById('held-count');
-  const heldText  = document.getElementById('held-count-text');
 
   if (paused) {
-    badge.className    = 'status-badge paused';
+    badge.className       = 'status-badge paused';
     badgeText.textContent = 'Paused';
     headline.textContent  = 'Your inbox is paused.';
     sub.textContent       = 'New emails are being held and not delivered.';
     btn.className         = 'toggle-btn action-unpause';
     btn.textContent       = '▶ Unpause & Deliver All';
-    if (heldCount > 0) {
-      heldText.textContent = `${heldCount} email${heldCount !== 1 ? 's' : ''} held`;
-      held.style.display = '';
-    } else {
-      held.style.display = 'none';
-    }
   } else {
-    badge.className    = 'status-badge active';
+    badge.className       = 'status-badge active';
     badgeText.textContent = 'Active';
     headline.textContent  = 'Your inbox is open.';
     sub.textContent       = 'New emails land normally.';
     btn.className         = 'toggle-btn action-pause';
     btn.textContent       = '⏸ Pause Inbox';
-    held.style.display = 'none';
   }
 }
 
