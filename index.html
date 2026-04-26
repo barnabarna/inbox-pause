@@ -487,6 +487,16 @@
         </div>
 
         <div class="field">
+          <label class="field-label">Addressed To (your domains)</label>
+          <div class="chips" id="chips-to"></div>
+          <div class="add-row">
+            <input class="inp" id="inp-to" placeholder="stanfordar.com, barnaszasz.com">
+            <button class="btn-add" onclick="addChip('to','inp-to','chips-to')">Add</button>
+          </div>
+          <div class="field-hint">Delivers emails sent to any address at these domains (e.g. your personal domain).</div>
+        </div>
+
+        <div class="field">
           <label class="field-label">Subject Keywords</label>
           <div class="chips" id="chips-keywords"></div>
           <div class="add-row">
@@ -542,7 +552,7 @@ let filterId = null;
 let heldCount = 0;
 
 let settings = {
-  exceptions: { senders: [], domains: [], keywords: [], allowStarred: false },
+  exceptions: { senders: [], domains: [], keywords: [], to: [], allowStarred: false },
   rules: [],
   excFilterIds: [],
 };
@@ -711,6 +721,7 @@ async function applyExceptionFilters(silent = false) {
     const queries = [];
     exc.senders.forEach(s => queries.push(`from:${s}`));
     exc.domains.forEach(d => queries.push(`from:@${d}`));
+    (exc.to || []).forEach(d => queries.push(`to:@${d}`));
     exc.keywords.forEach(k => queries.push(`subject:(${k})`));
     if (exc.allowStarred) queries.push('is:starred');
 
@@ -824,6 +835,7 @@ function rmChip(field, i, cid) {
 function renderSettings() {
   renderChips('chips-senders',  'senders');
   renderChips('chips-domains',  'domains');
+  renderChips('chips-to',       'to');
   renderChips('chips-keywords', 'keywords');
   document.getElementById('sw-starred').checked = settings.exceptions.allowStarred;
   renderRules();
