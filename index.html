@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inbox Pause</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;1,300&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F4F2ED;
+      --surface: #FFFFFF;
+      --border: #E4E1D8;
+      --text: #1A1A1A;
+      --muted: #6B6866;
+      --accent: #1a73e8;
+      --accent-bg: #EBF1FD;
+      --red: #D93025;
+      --red-bg: #FCE8E6;
+      --green: #1E8E3E;
+      --shadow: 0 1px 8px rgba(0,0,0,.07), 0 0 0 1px rgba(0,0,0,.04);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,.13);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: 'Fraunces', serif;
+      font-weight: 300;
+      font-size: 19px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .logo-pause {
+      width: 28px; height: 28px;
+      background: var(--text);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-pause svg { color: white; }
+    .user-bar {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13px; color: var(--muted);
+    }
+    .btn-ghost {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 12px; font-weight: 500;
+      padding: 6px 14px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-ghost:hover { border-color: var(--muted); color: var(--text); }
+
+    /* ── Main ── */
+    main {
+      flex: 1;
+      max-width: 500px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 20px 60px;
+    }
+
+    /* ── Sign-in ── */
+    #screen-signin {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 65vh;
+      text-align: center; gap: 20px;
+    }
+    .hero-title {
+      font-family: 'Fraunces', serif;
+      font-size: 44px; font-weight: 300; line-height: 1.2;
+    }
+    .hero-title em { font-style: italic; color: var(--accent); }
+    .hero-sub {
+      font-size: 15px; color: var(--muted);
+      max-width: 320px; line-height: 1.65;
+    }
+    .google-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 24px; border-radius: 12px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px; font-weight: 600; color: var(--text);
+      cursor: pointer; box-shadow: var(--shadow);
+      transition: box-shadow .2s, transform .15s;
+      margin-top: 8px;
+    }
+    .google-btn:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+
+    /* ── App ── */
+    #screen-app { display: none; }
+
+    /* ── Pause Card ── */
+    .card {
+      background: var(--surface);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .pause-card {
+      padding: 36px 32px 28px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .status-eyebrow {
+      font-size: 10.5px; font-weight: 600;
+      letter-spacing: 1.4px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 14px;
+    }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      margin-bottom: 22px;
+      transition: all .3s;
+    }
+    .status-badge.active { background: #E6F4EA; color: var(--green); }
+    .status-badge.paused { background: var(--red-bg); color: var(--red); }
+    .status-badge .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+    }
+    .status-badge.active .dot { background: var(--green); }
+    .status-badge.paused .dot {
+      background: var(--red);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+    .status-headline {
+      font-family: 'Fraunces', serif;
+      font-size: 30px; font-weight: 300;
+      line-height: 1.25; margin-bottom: 8px;
+    }
+    .status-sub {
+      font-size: 13px; color: var(--muted);
+      line-height: 1.5; margin-bottom: 28px; min-height: 20px;
+    }
+    .held-count {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--red-bg); color: var(--red);
+      border-radius: 20px; padding: 6px 16px;
+      font-size: 13px; font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .toggle-btn {
+      width: 100%; padding: 15px 20px;
+      border-radius: 14px; border: none;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: all .2s;
+      letter-spacing: .1px;
+    }
+    .toggle-btn.action-pause {
+      background: var(--accent); color: white;
+      box-shadow: 0 4px 16px rgba(26,115,232,.3);
+    }
+    .toggle-btn.action-pause:hover {
+      background: #1558d4;
+      box-shadow: 0 6px 22px rgba(26,115,232,.45);
+      transform: translateY(-1px);
+    }
+    .toggle-btn.action-unpause {
+      background: var(--red); color: white;
+      box-shadow: 0 4px 16px rgba(217,48,37,.3);
+      animation: pulse-red 2.2s ease-in-out infinite;
+    }
+    .toggle-btn.action-unpause:hover {
+      background: #b31412; animation: none;
+      transform: translateY(-1px);
+    }
+    .toggle-btn:disabled {
+      opacity: .55; cursor: not-allowed;
+      transform: none !important; animation: none !important;
+      box-shadow: none !important;
+    }
+    @keyframes pulse-red {
+      0%,100% { box-shadow: 0 4px 16px rgba(217,48,37,.3) }
+      50% { box-shadow: 0 4px 26px rgba(217,48,37,.55) }
+    }
+
+    /* ── Settings Card ── */
+    .settings-card { overflow: hidden; }
+    .settings-top {
+      padding: 20px 26px 0;
+    }
+    .settings-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px; font-weight: 300; margin-bottom: 4px;
+    }
+    .settings-desc { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+    .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 26px; }
+    .tab {
+      padding: 10px 12px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px; font-weight: 500; color: var(--muted);
+      background: none; border: none; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; cursor: pointer; transition: color .15s, border-color .15s;
+    }
+    .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab:hover:not(.on) { color: var(--text); }
+
+    .panel { display: none; padding: 22px 26px 26px; }
+    .panel.on { display: block; }
+
+    .panel-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+
+    /* Fields */
+    .field { margin-bottom: 20px; }
+    .field-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .9px; text-transform: uppercase;
+      color: var(--muted); display: block; margin-bottom: 8px;
+    }
+    .field-hint { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+
+    /* Chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; min-height: 2px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 10px;
+      background: var(--accent-bg); color: var(--accent);
+      font-size: 12px; font-weight: 500;
+    }
+    .chip-x {
+      background: none; border: none; cursor: pointer;
+      color: var(--accent); font-size: 15px; line-height: 1;
+      padding: 0; width: 16px; height: 16px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; transition: background .12s;
+    }
+    .chip-x:hover { background: rgba(26,115,232,.18); }
+    .add-row { display: flex; gap: 8px; }
+    .inp {
+      flex: 1; padding: 9px 12px; border-radius: 8px;
+      border: 1.5px solid var(--border); background: var(--bg);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px; color: var(--text); outline: none;
+      transition: border-color .15s, background .15s;
+    }
+    .inp:focus { border-color: var(--accent); background: white; }
+    .btn-add {
+      padding: 9px 16px; border-radius: 8px;
+      border: 1.5px solid var(--border); background: white;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px; font-weight: 600; color: var(--accent);
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .btn-add:hover { background: var(--accent-bg); border-color: var(--accent); }
+
+    /* Toggle row */
+    .trow {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 16px;
+      padding: 10px 0;
+    }
+    .trow-text .trow-main { font-size: 14px; font-weight: 500; }
+    .trow-text .trow-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .sw { position: relative; width: 38px; height: 22px; flex-shrink: 0; }
+    .sw input { opacity: 0; width: 0; height: 0; }
+    .sw-track {
+      position: absolute; inset: 0; border-radius: 11px;
+      background: #d0cec9; cursor: pointer; transition: background .2s;
+    }
+    .sw-track::before {
+      content: ''; position: absolute;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: white; top: 3px; left: 3px;
+      transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.22);
+    }
+    .sw input:checked + .sw-track { background: var(--accent); }
+    .sw input:checked + .sw-track::before { transform: translateX(16px); }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+    .btn-secondary {
+      width: 100%; padding: 11px;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      background: white; font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px; font-weight: 600; color: var(--text);
+      cursor: pointer; transition: all .15s; display: flex;
+      align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+
+    /* Rules */
+    .rule-card {
+      border: 1.5px solid var(--border); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 10px;
+      transition: border-color .15s;
+    }
+    .rule-card:hover { border-color: #c5c2b9; }
+    .rule-head {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 6px;
+    }
+    .rule-name { font-size: 14px; font-weight: 600; }
+    .rule-ctrls { display: flex; align-items: center; gap: 8px; }
+    .rule-del {
+      width: 26px; height: 26px; border-radius: 6px;
+      border: none; background: transparent; cursor: pointer;
+      font-size: 14px; color: var(--muted); transition: all .15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .rule-del:hover { background: var(--red-bg); color: var(--red); }
+    .rule-time { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+    .days { display: flex; gap: 5px; }
+    .day {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1.5px solid var(--border); background: white;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      color: var(--muted); transition: all .15s;
+    }
+    .day.on { background: var(--accent); border-color: var(--accent); color: white; }
+
+    .btn-add-rule {
+      width: 100%; padding: 12px;
+      border: 2px dashed var(--border); border-radius: 12px;
+      background: transparent; cursor: pointer;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px; font-weight: 500; color: var(--muted);
+      transition: all .15s;
+    }
+    .btn-add-rule:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+
+    .empty { text-align: center; padding: 18px 0; font-size: 13px; color: var(--muted); }
+
+    /* ── Loading ── */
+    #loading {
+      position: fixed; inset: 0;
+      background: rgba(244,242,237,.88);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999; backdrop-filter: blur(5px);
+    }
+    #loading.off { display: none; }
+    .loading-box {
+      background: white; border-radius: 18px;
+      padding: 30px 40px; text-align: center;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+    }
+    .spinner {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      animation: spin .75s linear infinite;
+      margin: 0 auto 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 14px; color: var(--muted); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%);
+      background: #1A1A1A; color: white;
+      padding: 11px 22px; border-radius: 10px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: var(--shadow-lg); z-index: 9999;
+      transition: opacity .28s, transform .28s;
+    }
+    #toast.off { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(8px); }
+
+    /* ── Mobile ── */
+    @media (max-width: 480px) {
+      main { padding: 24px 14px 48px; }
+      .pause-card { padding: 28px 22px 22px; }
+      .hero-title { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading" class="off">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Loading…</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="off"></div>
+
+<!-- Header -->
+<header>
+  <a class="logo" href="#">
+    <div class="logo-pause">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+      </svg>
+    </div>
+    Inbox Pause
+  </a>
+  <div id="header-right"></div>
+</header>
+
+<!-- Main -->
+<main>
+
+  <!-- Sign-in screen -->
+  <div id="screen-signin">
+    <h1 class="hero-title">Quiet your inbox.<br><em>On your terms.</em></h1>
+    <p class="hero-sub">Pause incoming mail at the server level. Zero notifications, zero leakage — on any device.</p>
+    <button class="google-btn" onclick="signIn()">
+      <svg width="18" height="18" viewBox="0 0 24 24">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+  </div>
+
+  <!-- App screen -->
+  <div id="screen-app">
+
+    <!-- Pause card -->
+    <div class="card pause-card">
+      <div class="status-eyebrow">Inbox Status</div>
+      <div id="status-badge" class="status-badge active">
+        <span class="dot"></span>
+        <span id="status-badge-text">Active</span>
+      </div>
+      <h2 class="status-headline" id="status-headline">Your inbox is open.</h2>
+      <p class="status-sub" id="status-sub">New emails land normally.</p>
+      <div id="held-count" style="display:none" class="held-count">
+        <span id="held-count-text"></span>
+      </div>
+      <button class="toggle-btn action-pause" id="main-btn" onclick="handleToggle()">
+        ⏸ Pause Inbox
+      </button>
+    </div>
+
+    <!-- Settings card -->
+    <div class="card settings-card">
+      <div class="settings-top">
+        <div class="settings-title">Settings</div>
+        <div class="settings-desc">Exceptions and scheduling</div>
+      </div>
+      <div class="tabs">
+        <button class="tab on" data-tab="exceptions">Exceptions</button>
+        <button class="tab" data-tab="schedule">Schedule</button>
+      </div>
+
+      <!-- Exceptions -->
+      <div class="panel on" id="panel-exceptions">
+        <p class="panel-desc">Emails matching any rule below will bypass the pause and arrive normally.</p>
+
+        <div class="field">
+          <label class="field-label">Allowed Senders</label>
+          <div class="chips" id="chips-senders"></div>
+          <div class="add-row">
+            <input class="inp" id="inp-sender" type="email" placeholder="boss@company.com">
+            <button class="btn-add" onclick="addChip('senders','inp-sender','chips-senders')">Add</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Allowed Domains</label>
+          <div class="chips" id="chips-domains"></div>
+          <div class="add-row">
+            <input class="inp" id="inp-domain" placeholder="company.com">
+            <button class="btn-add" onclick="addChip('domains','inp-domain','chips-domains')">Add</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Subject Keywords</label>
+          <div class="chips" id="chips-keywords"></div>
+          <div class="add-row">
+            <input class="inp" id="inp-kw" placeholder="URGENT, action required…">
+            <button class="btn-add" onclick="addChip('keywords','inp-kw','chips-keywords')">Add</button>
+          </div>
+          <div class="field-hint">Emails with these words in the subject will bypass the pause.</div>
+        </div>
+
+        <div class="trow">
+          <div class="trow-text">
+            <div class="trow-main">Allow starred emails through</div>
+            <div class="trow-sub">Starred emails always bypass the pause</div>
+          </div>
+          <label class="sw">
+            <input type="checkbox" id="sw-starred" onchange="settings.exceptions.allowStarred=this.checked;saveSettings()">
+            <span class="sw-track"></span>
+          </label>
+        </div>
+
+        <hr class="divider">
+        <button class="btn-secondary" onclick="applyExceptionFilters()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M1 4.27v2.52c0 .45.2.84.53 1.1l6.97 6.1V19c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-4.99l6.97-6.11c.33-.26.53-.65.53-1.1V4.27C24 3.57 23.43 3 22.73 3H1.27C.57 3 0 3.57 0 4.27z"/></svg>
+          Apply exception filters to Gmail
+        </button>
+        <div class="field-hint" style="text-align:center;margin-top:6px;">Creates Gmail-side filters so exceptions work even when this page is closed</div>
+      </div>
+
+      <!-- Schedule -->
+      <div class="panel" id="panel-schedule">
+        <p class="panel-desc">Automatically pause and unpause on a recurring schedule. This page must be open for schedule checks to run.</p>
+        <div id="rules-list"></div>
+        <button class="btn-add-rule" onclick="promptAddRule()">+ Add Schedule Rule</button>
+      </div>
+    </div>
+
+  </div><!-- /screen-app -->
+</main>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const CLIENT_ID   = '948980601473-4tpqjeegq5fth015mul0k67ukdpn60pf.apps.googleusercontent.com';
+const REDIRECT    = 'https://barnabarna.github.io/inbox-pause/';
+const SCOPES      = 'https://www.googleapis.com/auth/gmail.modify';
+const PAUSE_LABEL = 'Inbox Pause';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let token    = null;
+let email    = null;
+let paused   = false;
+let labelId  = null;
+let filterId = null;
+let heldCount = 0;
+
+let settings = {
+  exceptions: { senders: [], domains: [], keywords: [], allowStarred: false },
+  rules: [],
+  excFilterIds: [],
+};
+
+// ── OAuth ─────────────────────────────────────────────────────────────────────
+function signIn() {
+  const p = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: REDIRECT,
+    response_type: 'token',
+    scope: SCOPES,
+    prompt: 'consent',
+  });
+  location.href = `https://accounts.google.com/o/oauth2/v2/auth?${p}`;
+}
+
+function signOut() {
+  token = null; email = null;
+  localStorage.removeItem('ip2_token');
+  localStorage.removeItem('ip2_expiry');
+  show('screen-signin'); hide('screen-app');
+  document.getElementById('header-right').innerHTML = '';
+}
+
+function handleCallback() {
+  if (!location.hash) return false;
+  const h = new URLSearchParams(location.hash.slice(1));
+  const t = h.get('access_token');
+  if (!t) return false;
+  token = t;
+  const exp = Date.now() + parseInt(h.get('expires_in') || 3600) * 1000 - 60000;
+  localStorage.setItem('ip2_token', t);
+  localStorage.setItem('ip2_expiry', exp);
+  // If popup for userscript: relay token and close
+  const state = h.get('state');
+  if (state === 'userscript' && window.opener) {
+    window.opener.postMessage({ type: 'inbox-pause-token', token: t }, '*');
+    setTimeout(() => window.close(), 400);
+    return true;
+  }
+  history.replaceState(null, '', location.pathname);
+  return true;
+}
+
+function loadToken() {
+  const t   = localStorage.getItem('ip2_token');
+  const exp = parseInt(localStorage.getItem('ip2_expiry') || 0);
+  if (t && Date.now() < exp) { token = t; return true; }
+  return false;
+}
+
+// ── Gmail API ─────────────────────────────────────────────────────────────────
+async function gapi(method, path, body) {
+  const r = await fetch(`https://gmail.googleapis.com/gmail/v1${path}`, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (r.status === 401) { signOut(); throw new Error('Session expired. Please sign in again.'); }
+  if (r.status === 204) return null;
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error?.message || `API ${r.status}`);
+  return j;
+}
+
+// ── Label ─────────────────────────────────────────────────────────────────────
+async function getOrCreateLabel() {
+  const d = await gapi('GET', '/users/me/labels');
+  const x = d.labels.find(l => l.name === PAUSE_LABEL);
+  if (x) return x.id;
+  const c = await gapi('POST', '/users/me/labels', {
+    name: PAUSE_LABEL,
+    labelListVisibility: 'labelShow',
+    messageListVisibility: 'show',
+    color: { backgroundColor: '#c9daf8', textColor: '#000000' },
+  });
+  return c.id;
+}
+
+// ── Check state ───────────────────────────────────────────────────────────────
+async function checkState() {
+  const d = await gapi('GET', '/users/me/labels');
+  const lbl = d.labels.find(l => l.name === PAUSE_LABEL);
+  if (!lbl) { paused = false; labelId = null; filterId = null; heldCount = 0; return; }
+  labelId = lbl.id;
+
+  const fd = await gapi('GET', '/users/me/settings/filters');
+  const pf = (fd.filter || []).find(f =>
+    f.action?.removeLabelIds?.includes('INBOX') &&
+    f.action?.addLabelIds?.includes(labelId)
+  );
+  filterId = pf?.id || null;
+  paused   = !!pf;
+
+  if (paused) {
+    const md = await gapi('GET', `/users/me/messages?labelIds=${labelId}&maxResults=1`);
+    heldCount = md.resultSizeEstimate || 0;
+  } else {
+    heldCount = 0;
+  }
+}
+
+// ── Pause ─────────────────────────────────────────────────────────────────────
+async function doPause() {
+  showLoad('Pausing your inbox…');
+  try {
+    labelId = await getOrCreateLabel();
+    await applyExceptionFilters(true);
+    const f = await gapi('POST', '/users/me/settings/filters', {
+      criteria: { size: 1, sizeComparison: 'larger' },
+      action: { removeLabelIds: ['INBOX'], addLabelIds: [labelId] },
+    });
+    filterId = f.id; paused = true; heldCount = 0;
+    updateUI(); toast('Inbox paused ⏸');
+  } catch (e) { toast('Error: ' + e.message); }
+  finally { hideLoad(); }
+}
+
+// ── Unpause ───────────────────────────────────────────────────────────────────
+async function doUnpause() {
+  showLoad('Delivering held emails…');
+  try {
+    if (filterId) await gapi('DELETE', `/users/me/settings/filters/${filterId}`);
+    if (labelId) {
+      let pt = null;
+      do {
+        const url = `/users/me/messages?labelIds=${labelId}&maxResults=100${pt ? `&pageToken=${pt}` : ''}`;
+        const md  = await gapi('GET', url);
+        const msgs = md.messages || [];
+        if (msgs.length) {
+          await gapi('POST', '/users/me/messages/batchModify', {
+            ids: msgs.map(m => m.id),
+            addLabelIds: ['INBOX'],
+            removeLabelIds: [labelId],
+          });
+        }
+        pt = md.nextPageToken;
+      } while (pt);
+    }
+    paused = false; filterId = null; heldCount = 0;
+    updateUI(); toast('Inbox unpaused — emails delivered ▶');
+  } catch (e) { toast('Error: ' + e.message); }
+  finally { hideLoad(); }
+}
+
+function handleToggle() { paused ? doUnpause() : doPause(); }
+
+// ── Exception filters ─────────────────────────────────────────────────────────
+// We create Gmail-side filters so exceptions work even without this page open.
+// Exception filters: add a marker label "Inbox Pause Exception" to matching mail.
+// A separate periodic check then moves those back to inbox.
+async function applyExceptionFilters(silent = false) {
+  if (!silent) showLoad('Applying exception filters…');
+  try {
+    // Clean up old ones
+    for (const fid of (settings.excFilterIds || [])) {
+      await gapi('DELETE', `/users/me/settings/filters/${fid}`).catch(() => {});
+    }
+    settings.excFilterIds = [];
+
+    // Build exception Gmail queries
+    const exc = settings.exceptions;
+    const queries = [];
+    exc.senders.forEach(s => queries.push(`from:${s}`));
+    exc.domains.forEach(d => queries.push(`from:@${d}`));
+    exc.keywords.forEach(k => queries.push(`subject:(${k})`));
+    if (exc.allowStarred) queries.push('is:starred');
+
+    // For each exception, create a filter that re-adds INBOX
+    // (This overrides the pause filter for matching mail)
+    const ids = [];
+    for (const q of queries) {
+      try {
+        const f = await gapi('POST', '/users/me/settings/filters', {
+          criteria: { query: q },
+          action: { addLabelIds: ['INBOX'] },
+        });
+        ids.push(f.id);
+      } catch (e) { console.warn('Exception filter:', q, e); }
+    }
+    settings.excFilterIds = ids;
+    saveSettings();
+    if (!silent) toast(`${ids.length} exception filter${ids.length !== 1 ? 's' : ''} applied`);
+  } catch (e) {
+    if (!silent) toast('Error: ' + e.message);
+  } finally {
+    if (!silent) hideLoad();
+  }
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function saveSettings() { localStorage.setItem('ip2_settings', JSON.stringify(settings)); }
+function loadSettings() {
+  try {
+    const r = localStorage.getItem('ip2_settings');
+    if (r) settings = { ...settings, ...JSON.parse(r) };
+  } catch (e) {}
+}
+
+// ── Scheduler ─────────────────────────────────────────────────────────────────
+function checkSchedule() {
+  if (!token) return;
+  const rules = (settings.rules || []).filter(r => r.enabled);
+  if (!rules.length) return;
+  const now = new Date();
+  const day = now.getDay();
+  const t   = now.toTimeString().slice(0, 5);
+  const shouldPause = rules.some(r => r.days.includes(day) && t >= r.startTime && t < r.endTime);
+  if (shouldPause && !paused) doPause();
+  else if (!shouldPause && paused) doUnpause();
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function show(id) { document.getElementById(id).style.display = ''; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+function updateUI() {
+  const badge     = document.getElementById('status-badge');
+  const badgeText = document.getElementById('status-badge-text');
+  const headline  = document.getElementById('status-headline');
+  const sub       = document.getElementById('status-sub');
+  const btn       = document.getElementById('main-btn');
+  const held      = document.getElementById('held-count');
+  const heldText  = document.getElementById('held-count-text');
+
+  if (paused) {
+    badge.className    = 'status-badge paused';
+    badgeText.textContent = 'Paused';
+    headline.textContent  = 'Your inbox is paused.';
+    sub.textContent       = 'New emails are being held and not delivered.';
+    btn.className         = 'toggle-btn action-unpause';
+    btn.textContent       = '▶ Unpause & Deliver All';
+    if (heldCount > 0) {
+      heldText.textContent = `${heldCount} email${heldCount !== 1 ? 's' : ''} held`;
+      held.style.display = '';
+    } else {
+      held.style.display = 'none';
+    }
+  } else {
+    badge.className    = 'status-badge active';
+    badgeText.textContent = 'Active';
+    headline.textContent  = 'Your inbox is open.';
+    sub.textContent       = 'New emails land normally.';
+    btn.className         = 'toggle-btn action-pause';
+    btn.textContent       = '⏸ Pause Inbox';
+    held.style.display = 'none';
+  }
+}
+
+// Chips
+function renderChips(cid, field) {
+  const c = document.getElementById(cid);
+  if (!c) return;
+  const items = settings.exceptions[field] || [];
+  c.innerHTML = items.map((v, i) =>
+    `<span class="chip">${esc(v)}<button class="chip-x" onclick="rmChip('${field}',${i},'${cid}')">×</button></span>`
+  ).join('');
+}
+function addChip(field, inpId, cid) {
+  const el = document.getElementById(inpId);
+  const v  = el.value.trim();
+  if (!v) return;
+  if (!settings.exceptions[field].includes(v)) {
+    settings.exceptions[field].push(v);
+    saveSettings();
+    renderChips(cid, field);
+  }
+  el.value = ''; el.focus();
+}
+function rmChip(field, i, cid) {
+  settings.exceptions[field].splice(i, 1);
+  saveSettings();
+  renderChips(cid, field);
+}
+
+function renderSettings() {
+  renderChips('chips-senders',  'senders');
+  renderChips('chips-domains',  'domains');
+  renderChips('chips-keywords', 'keywords');
+  document.getElementById('sw-starred').checked = settings.exceptions.allowStarred;
+  renderRules();
+}
+
+// Rules
+function renderRules() {
+  const list = document.getElementById('rules-list');
+  const rules = settings.rules;
+  if (!rules.length) { list.innerHTML = '<div class="empty">No rules yet.</div>'; return; }
+  const DN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  list.innerHTML = rules.map((r, i) => `
+    <div class="rule-card">
+      <div class="rule-head">
+        <span class="rule-name">${esc(r.name)}</span>
+        <div class="rule-ctrls">
+          <label class="sw"><input type="checkbox" ${r.enabled?'checked':''} onchange="settings.rules[${i}].enabled=this.checked;saveSettings()"><span class="sw-track"></span></label>
+          <button class="rule-del" onclick="delRule(${i})">🗑</button>
+        </div>
+      </div>
+      <div class="rule-time">${r.startTime} → ${r.endTime}</div>
+      <div class="days">${DN.map((d,di)=>`<button class="day ${r.days.includes(di)?'on':''}" onclick="toggleDay(${i},${di},this)">${d}</button>`).join('')}</div>
+    </div>`).join('');
+}
+function toggleDay(ri, di, btn) {
+  const d = settings.rules[ri].days;
+  const p = d.indexOf(di);
+  p >= 0 ? d.splice(p,1) : d.push(di);
+  btn.classList.toggle('on');
+  saveSettings();
+}
+function delRule(i) { settings.rules.splice(i,1); saveSettings(); renderRules(); }
+function promptAddRule() {
+  const name = prompt('Rule name (e.g. "Deep work hours"):'); if (!name) return;
+  const s = prompt('Pause start time (HH:MM 24h):', '09:00');
+  if (!s || !/^\d{2}:\d{2}$/.test(s)) { toast('Bad format, use HH:MM'); return; }
+  const e = prompt('Pause end time (HH:MM 24h):', '17:00');
+  if (!e || !/^\d{2}:\d{2}$/.test(e)) { toast('Bad format, use HH:MM'); return; }
+  settings.rules.push({ id: Date.now()+'', name, enabled: true, type: 'schedule', days: [1,2,3,4,5], startTime: s, endTime: e });
+  saveSettings(); renderRules();
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+    btn.classList.add('on');
+    document.getElementById(`panel-${btn.dataset.tab}`).classList.add('on');
+  };
+});
+
+// Input enter key
+['inp-sender','inp-domain','inp-kw'].forEach((id, i) => {
+  const maps = [['senders','inp-sender','chips-senders'],['domains','inp-domain','chips-domains'],['keywords','inp-kw','chips-keywords']];
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); addChip(...maps[i]); } });
+});
+
+// Loading / toast
+function showLoad(msg) { document.getElementById('loading-text').textContent = msg; document.getElementById('loading').classList.remove('off'); }
+function hideLoad() { document.getElementById('loading').classList.add('off'); }
+let toastT;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.remove('off');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('off'), 3200);
+}
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  loadSettings();
+  handleCallback(); // handle OAuth redirect
+  if (!token && !loadToken()) { show('screen-signin'); return; }
+
+  showLoad('Checking inbox status…');
+  try {
+    const p = await gapi('GET', '/users/me/profile');
+    email = p.emailAddress;
+    await checkState();
+    // Show app
+    hide('screen-signin'); show('screen-app');
+    document.getElementById('header-right').innerHTML =
+      `<div class="user-bar"><span>${email}</span><button class="btn-ghost" onclick="signOut()">Sign out</button></div>`;
+    updateUI();
+    renderSettings();
+    // Schedule checker
+    setInterval(checkSchedule, 60000);
+    checkSchedule();
+  } catch (e) {
+    toast(e.message);
+    show('screen-signin');
+  } finally { hideLoad(); }
+}
+
+init();
+</script>
+</body>
+</html>
