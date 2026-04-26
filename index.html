@@ -752,7 +752,7 @@ function saveSettings() { localStorage.setItem('ip2_settings', JSON.stringify(se
 function loadSettings() {
   try {
     const r = localStorage.getItem('ip2_settings');
-    if (r) settings = { ...settings, ...JSON.parse(r) };
+    if (r) { const p = JSON.parse(r); settings = { ...settings, ...p, exceptions: { ...settings.exceptions, ...(p.exceptions||{}) } }; }
   } catch (e) {}
 }
 
