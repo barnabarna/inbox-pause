@@ -22,7 +22,7 @@
   // ─── Config ─────────────────────────────────────────────────────────────────
   const CLIENT_ID   = '948980601473-4tpqjeegq5fth015mul0k67ukdpn60pf.apps.googleusercontent.com';
   const REDIRECT    = 'https://barnabarna.github.io/inbox-pause/';
-  const SCOPES      = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.insert';
+  const SCOPES      = 'https://www.googleapis.com/auth/gmail.modify';
   const PAUSE_LABEL = 'Inbox Pause';
   const APP_URL     = 'https://barnabarna.github.io/inbox-pause/';
 
@@ -352,8 +352,8 @@
       ].join('\r\n');
       const encoded = btoa(unescape(encodeURIComponent(body)))
         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      const msg = await gapi('POST', '/users/me/messages?internalDateSource=receivedTime', {
-        raw: encoded, labelIds: ['INBOX', 'UNREAD'],
+      const msg = await gapi('POST', '/users/me/messages/send', {
+        raw: encoded,
       });
       GM_setValue('ip2_signal_id', msg.id);
     } catch (e) { console.warn('[InboxPause] Signal email failed:', e); }
