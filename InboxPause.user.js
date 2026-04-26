@@ -22,7 +22,7 @@
   // ─── Config ─────────────────────────────────────────────────────────────────
   const CLIENT_ID   = '948980601473-4tpqjeegq5fth015mul0k67ukdpn60pf.apps.googleusercontent.com';
   const REDIRECT    = 'https://barnabarna.github.io/inbox-pause/';
-  const SCOPES      = 'https://www.googleapis.com/auth/gmail.modify';
+  const SCOPES      = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.insert';
   const PAUSE_LABEL = 'Inbox Pause';
   const APP_URL     = 'https://barnabarna.github.io/inbox-pause/';
 
@@ -324,13 +324,7 @@
       );
       filterId = pf?.id || null;
       paused   = !!pf;
-
-      if (paused) {
-        const md = await gapi('GET', `/users/me/messages?labelIds=${labelId}&maxResults=1`);
-        heldCount = md.resultSizeEstimate || 0;
-      } else {
-        heldCount = 0;
-      }
+      heldCount = 0;
     } catch (e) {
       if (e.message !== 'auth') console.warn('[InboxPause]', e);
     } finally {
