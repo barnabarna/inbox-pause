@@ -338,6 +338,42 @@
     }
   }
 
+  // ─── Signal email ─────────────────────────────────────────────────────────────
+  const SIGNAL_SUBJECT = '⏸ Your inbox is paused';
+
+  async function createSignalEmail() {
+    try {
+      const profile = await gapi('GET', '/users/me/profile');
+      const addr    = profile.emailAddress;
+      const body    = [
+        `To: ${addr}`, `From: ${addr}`,
+        `Subject: ${SIGNAL_SUBJECT}`,
+        `Content-Type: text/html; charset=utf-8`, ``,
+        `<div style="font-family:sans-serif;padding:20px;max-width:480px">`,
+        `<h2 style="margin:0 0 10px">⏸ Your inbox is paused</h2>`,
+        `<p style="color:#555;margin:0 0 16px">New emails are being held.</p>`,
+        `<a href="${APP_URL}" style="display:inline-block;padding:10px 20px;background:#1a73e8;`,
+        `color:white;border-radius:8px;text-decoration:none;font-weight:600">Unpause &amp; Deliver</a>`,
+        `</div>`,
+      ].join('\r\n');
+      const encoded = btoa(unescape(encodeURIComponent(body)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const msg = await gapi('POST', '/users/me/messages?internalDateSource=receivedTime', {
+        raw: encoded, labelIds: ['INBOX', 'UNREAD'],
+      });
+      GM_setValue('ip2_signal_id', msg.id);
+    } catch (e) { console.warn('[InboxPause] Signal email failed:', e); }
+  }
+
+  async function deleteSignalEmail() {
+    const id = GM_getValue('ip2_signal_id', null);
+    if (!id) return;
+    try {
+      await gapi('DELETE', `/users/me/messages/${id}`);
+      GM_deleteValue('ip2_signal_id');
+    } catch (e) { console.warn('[InboxPause] Signal delete failed:', e); }
+  }
+
   // ─── Pause ───────────────────────────────────────────────────────────────────
   async function doPause() {
     setButtonLoading();
@@ -349,6 +385,7 @@
         action: { removeLabelIds: ['INBOX'], addLabelIds: [labelId] },
       });
       filterId = f.id; paused = true; heldCount = 0;
+      await createSignalEmail();
       updateUI(); toast('Inbox paused ⏸');
     } catch (e) {
       if (e.message !== 'auth' && e.message !== 'Cancelled') toast('Error: ' + e.message);
@@ -362,6 +399,7 @@
     try {
       await ensureToken();
       if (filterId) await gapi('DELETE', `/users/me/settings/filters/${filterId}`);
+      await deleteSignalEmail();
       if (labelId) {
         let pt = null;
         do {
@@ -456,8 +494,7 @@
     if (!btn) return;
     if (paused) {
       btn.className = 'state-paused';
-      const n = heldCount > 0 ? heldCount : '';
-      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> Paused${n ? ` <span id="ip-badge">${n > 99 ? '99+' : n}</span>` : ''}`;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> Paused`;
     } else {
       btn.className = 'state-active';
       btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2v6l2 2-2 2v6l16-8L6 2z"/></svg> Pause Inbox`;
@@ -475,11 +512,7 @@
     if (paused) {
       banner.classList.remove('off');
       const textEl = document.getElementById('ip-banner-text');
-      if (textEl) {
-        textEl.innerHTML = heldCount > 0
-          ? `Your inbox is paused. <strong>${heldCount} email${heldCount !== 1 ? 's' : ''} held.</strong>`
-          : 'Your inbox is paused. New emails are being held.';
-      }
+      if (textEl) textEl.textContent = 'Your inbox is paused. New emails are being held.';
     } else {
       banner.classList.add('off');
     }
