@@ -472,7 +472,7 @@
           <label class="field-label">Allowed Senders</label>
           <div class="chips" id="chips-senders"></div>
           <div class="add-row">
-            <input class="inp" id="inp-sender" type="email" placeholder="boss@company.com">
+            <input class="inp" id="inp-sender" type="text" placeholder="full@email.com or partial (e.g. szasz)">
             <button class="btn-add" onclick="addChip('senders','inp-sender','chips-senders')">Add</button>
           </div>
         </div>
@@ -481,7 +481,7 @@
           <label class="field-label">Allowed Domains</label>
           <div class="chips" id="chips-domains"></div>
           <div class="add-row">
-            <input class="inp" id="inp-domain" placeholder="company.com">
+            <input class="inp" id="inp-domain" placeholder="company.com — comma-separate for multiple">
             <button class="btn-add" onclick="addChip('domains','inp-domain','chips-domains')">Add</button>
           </div>
         </div>
@@ -500,7 +500,7 @@
           <label class="field-label">Subject Keywords</label>
           <div class="chips" id="chips-keywords"></div>
           <div class="add-row">
-            <input class="inp" id="inp-kw" placeholder="URGENT, action required…">
+            <input class="inp" id="inp-kw" placeholder="URGENT, action required… (comma-separate)">
             <button class="btn-add" onclick="addChip('keywords','inp-kw','chips-keywords')">Add</button>
           </div>
           <div class="field-hint">Emails with these words in the subject will bypass the pause.</div>
@@ -719,7 +719,11 @@ async function applyExceptionFilters(silent = false) {
     // Build exception Gmail queries
     const exc = settings.exceptions;
     const queries = [];
-    exc.senders.forEach(s => queries.push(`from:${s}`));
+    exc.senders.forEach(s => {
+      // Full email address → exact match; partial (no @) → wildcard
+      const q = s.includes('@') ? `from:${s}` : `from:*${s}*`;
+      queries.push(q);
+    });
     exc.domains.forEach(d => queries.push(`from:@${d}`));
     (exc.to || []).forEach(d => queries.push(`to:@${d}`));
     exc.keywords.forEach(k => queries.push(`subject:(${k})`));
@@ -817,14 +821,17 @@ function renderChips(cid, field) {
 }
 function addChip(field, inpId, cid) {
   const el = document.getElementById(inpId);
-  const v  = el.value.trim();
-  if (!v) return;
+  const values = el.value.split(',').map(s => s.trim()).filter(Boolean);
+  if (!values.length) return;
   if (!Array.isArray(settings.exceptions[field])) settings.exceptions[field] = [];
-  if (!settings.exceptions[field].includes(v)) {
-    settings.exceptions[field].push(v);
-    saveSettings();
-    renderChips(cid, field);
+  let added = false;
+  for (const v of values) {
+    if (!settings.exceptions[field].includes(v)) {
+      settings.exceptions[field].push(v);
+      added = true;
+    }
   }
+  if (added) { saveSettings(); renderChips(cid, field); }
   el.value = ''; el.focus();
 }
 function rmChip(field, i, cid) {
