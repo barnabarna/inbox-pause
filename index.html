@@ -819,6 +819,7 @@ function addChip(field, inpId, cid) {
   const el = document.getElementById(inpId);
   const v  = el.value.trim();
   if (!v) return;
+  if (!Array.isArray(settings.exceptions[field])) settings.exceptions[field] = [];
   if (!settings.exceptions[field].includes(v)) {
     settings.exceptions[field].push(v);
     saveSettings();
