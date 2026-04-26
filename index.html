@@ -658,6 +658,53 @@ async function checkState() {
   }
 }
 
+// ── Pause signal email ────────────────────────────────────────────────────────
+const SIGNAL_SUBJECT = '⏸ Your inbox is paused';
+const SIGNAL_MARKER  = 'X-Inbox-Pause-Signal'; // stored in localStorage to find it later
+
+async function createSignalEmail() {
+  const subject = SIGNAL_SUBJECT;
+  const body    = [
+    `To: ${email}`,
+    `From: ${email}`,
+    `Subject: ${subject}`,
+    `Content-Type: text/html; charset=utf-8`,
+    ``,
+    `<div style="font-family:sans-serif;padding:20px;max-width:480px">`,
+    `<h2 style="margin:0 0 10px">⏸ Your inbox is paused</h2>`,
+    `<p style="color:#555;margin:0 0 16px">New emails are being held and won't appear until you unpause.</p>`,
+    `<a href="https://barnabarna.github.io/inbox-pause/" `,
+    `style="display:inline-block;padding:10px 20px;background:#1a73e8;color:white;`,
+    `border-radius:8px;text-decoration:none;font-weight:600">Unpause &amp; Deliver</a>`,
+    `</div>`,
+  ].join('\r\n');
+
+  const encoded = btoa(unescape(encodeURIComponent(body)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  try {
+    // Insert directly into inbox (no SMTP, no spam filter)
+    const msg = await gapi('POST', '/users/me/messages?internalDateSource=receivedTime', {
+      raw: encoded,
+      labelIds: ['INBOX', 'UNREAD'],
+    });
+    localStorage.setItem('ip2_signal_id', msg.id);
+  } catch (e) {
+    console.warn('[InboxPause] Could not create signal email:', e);
+  }
+}
+
+async function deleteSignalEmail() {
+  const id = localStorage.getItem('ip2_signal_id');
+  if (!id) return;
+  try {
+    await gapi('DELETE', `/users/me/messages/${id}`);
+    localStorage.removeItem('ip2_signal_id');
+  } catch (e) {
+    console.warn('[InboxPause] Could not delete signal email:', e);
+  }
+}
+
 // ── Pause ─────────────────────────────────────────────────────────────────────
 async function doPause() {
   showLoad('Pausing your inbox…');
@@ -669,6 +716,7 @@ async function doPause() {
       action: { removeLabelIds: ['INBOX'], addLabelIds: [labelId] },
     });
     filterId = f.id; paused = true; heldCount = 0;
+    await createSignalEmail();
     updateUI(); toast('Inbox paused ⏸');
   } catch (e) { toast('Error: ' + e.message); }
   finally { hideLoad(); }
@@ -679,6 +727,7 @@ async function doUnpause() {
   showLoad('Delivering held emails…');
   try {
     if (filterId) await gapi('DELETE', `/users/me/settings/filters/${filterId}`);
+    await deleteSignalEmail();
     if (labelId) {
       let pt = null;
       do {
