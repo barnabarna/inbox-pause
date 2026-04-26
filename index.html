@@ -655,16 +655,19 @@ async function checkState() {
 const SIGNAL_SUBJECT = '⏸ Your inbox is paused';
 const SIGNAL_MARKER  = 'X-Inbox-Pause-Signal'; // stored in localStorage to find it later
 
+function mimeEncodeHeader(str) {
+  return '=?UTF-8?B?' + btoa(unescape(encodeURIComponent(str))) + '?=';
+}
+
 async function createSignalEmail() {
-  const subject = SIGNAL_SUBJECT;
-  const body    = [
+  const body = [
     `To: ${email}`,
     `From: ${email}`,
-    `Subject: ${subject}`,
+    `Subject: ${mimeEncodeHeader(SIGNAL_SUBJECT)}`,
     `Content-Type: text/html; charset=utf-8`,
     ``,
     `<div style="font-family:sans-serif;padding:20px;max-width:480px">`,
-    `<h2 style="margin:0 0 10px">⏸ Your inbox is paused</h2>`,
+    `<h2 style="margin:0 0 10px">&#x23F8; Your inbox is paused</h2>`,
     `<p style="color:#555;margin:0 0 16px">New emails are being held and won't appear until you unpause.</p>`,
     `<a href="https://barnabarna.github.io/inbox-pause/" `,
     `style="display:inline-block;padding:10px 20px;background:#1a73e8;color:white;`,
@@ -676,11 +679,19 @@ async function createSignalEmail() {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
   try {
-    // Insert directly into inbox (no SMTP, no spam filter)
-    const msg = await gapi('POST', '/users/me/messages/send', {
-      raw: encoded,
-    });
+    const msg = await gapi('POST', '/users/me/messages/send', { raw: encoded });
     localStorage.setItem('ip2_signal_id', msg.id);
+
+    // The pause filter catches this email immediately — move it back to INBOX
+    // so it stays visible as a reminder when neither the web app nor userscript is open.
+    if (labelId) {
+      try {
+        await gapi('POST', `/users/me/messages/${msg.id}/modify`, {
+          addLabelIds: ['INBOX'],
+          removeLabelIds: [labelId],
+        });
+      } catch (_) { /* non-fatal */ }
+    }
   } catch (e) {
     console.warn('[InboxPause] Could not create signal email:', e);
   }
