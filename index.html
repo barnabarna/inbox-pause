@@ -862,7 +862,7 @@ async function syncSettingsFromGmail() {
     settings.exceptions = exc;
     settings.excFilterIds = ids;
     saveSettings();
-    renderExceptions();
+    renderSettings();
   } catch (e) {
     console.warn('[InboxPause] syncSettingsFromGmail failed:', e);
   }
