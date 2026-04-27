@@ -584,11 +584,16 @@ function handleCallback() {
   const exp = Date.now() + parseInt(h.get('expires_in') || 3600) * 1000 - 60000;
   localStorage.setItem('ip2_token', t);
   localStorage.setItem('ip2_expiry', exp);
-  // If popup for userscript: relay token and close
   const state = h.get('state');
+  // Popup flow (full auth)
   if (state === 'userscript' && window.opener) {
     window.opener.postMessage({ type: 'inbox-pause-token', token: t }, '*');
     setTimeout(() => window.close(), 400);
+    return true;
+  }
+  // Silent iframe refresh flow
+  if (state === 'userscript-silent' && window.parent !== window) {
+    window.parent.postMessage({ type: 'inbox-pause-token', token: t }, '*');
     return true;
   }
   history.replaceState(null, '', location.pathname);
@@ -812,6 +817,57 @@ function loadSettings() {
   } catch (e) {}
 }
 
+// Read exception filters back from Gmail and reconstruct settings.
+// This keeps Chrome and Firefox (and any browser) in sync automatically.
+async function syncSettingsFromGmail() {
+  try {
+    const fd = await gapi('GET', '/users/me/settings/filters');
+    const filters = fd.filter || [];
+
+    // Exception filters: add INBOX and have a query criterion
+    const excFilters = filters.filter(f =>
+      f.action?.addLabelIds?.includes('INBOX') && f.criteria?.query
+    );
+
+    if (excFilters.length === 0) return; // nothing to sync
+
+    const exc = { senders: [], domains: [], keywords: [], to: [], allowStarred: false };
+    const ids = [];
+
+    for (const f of excFilters) {
+      ids.push(f.id);
+      const q = f.criteria.query.trim();
+
+      if (q === 'is:starred') {
+        exc.allowStarred = true;
+      } else if (q.startsWith('from:@')) {
+        // domain exception: from:@domain.com
+        exc.domains.push(q.slice(6));
+      } else if (q.startsWith('to:@')) {
+        // to-domain exception: to:@domain.com
+        exc.to.push(q.slice(4));
+      } else if (q.startsWith('subject:(') && q.endsWith(')')) {
+        // keyword exception: subject:(word)
+        exc.keywords.push(q.slice(9, -1));
+      } else if (q.startsWith('from:*') && q.endsWith('*')) {
+        // partial sender: from:*partial*
+        exc.senders.push(q.slice(6, -1));
+      } else if (q.startsWith('from:')) {
+        // full sender: from:email@domain.com
+        exc.senders.push(q.slice(5));
+      }
+    }
+
+    // Merge into settings and persist so the UI reflects the synced state
+    settings.exceptions = exc;
+    settings.excFilterIds = ids;
+    saveSettings();
+    renderExceptions();
+  } catch (e) {
+    console.warn('[InboxPause] syncSettingsFromGmail failed:', e);
+  }
+}
+
 // ── Scheduler ─────────────────────────────────────────────────────────────────
 function checkSchedule() {
   if (!token) return;
@@ -968,6 +1024,7 @@ async function init() {
     const p = await gapi('GET', '/users/me/profile');
     email = p.emailAddress;
     await checkState();
+    await syncSettingsFromGmail(); // sync exceptions from Gmail filters → works across browsers
     // Show app
     hide('screen-signin'); show('screen-app');
     document.getElementById('header-right').innerHTML =
