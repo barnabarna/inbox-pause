@@ -591,9 +591,10 @@ function handleCallback() {
     setTimeout(() => window.close(), 400);
     return true;
   }
-  // Silent iframe refresh flow
-  if (state === 'userscript-silent' && window.parent !== window) {
-    window.parent.postMessage({ type: 'inbox-pause-token', token: t }, '*');
+  // Silent popup refresh flow (Google blocks iframes, so we use a 1×1 popup)
+  if (state === 'userscript-silent' && window.opener) {
+    window.opener.postMessage({ type: 'inbox-pause-token', token: t }, '*');
+    setTimeout(() => window.close(), 200);
     return true;
   }
   history.replaceState(null, '', location.pathname);
