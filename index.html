@@ -576,6 +576,19 @@ function signOut() {
 }
 
 function handleCallback() {
+  // ── PKCE authorization code flow (userscript) ──
+  // Code arrives as ?code=...&state=userscript-pkce in search params
+  const sp = new URLSearchParams(location.search);
+  const code = sp.get('code');
+  const spState = sp.get('state');
+  if (code && spState === 'userscript-pkce' && window.opener) {
+    window.opener.postMessage({ type: 'inbox-pause-code', code }, '*');
+    history.replaceState(null, '', location.pathname);
+    setTimeout(() => window.close(), 200);
+    return true;
+  }
+
+  // ── Implicit flow (web app's own auth) ──
   if (!location.hash) return false;
   const h = new URLSearchParams(location.hash.slice(1));
   const t = h.get('access_token');
@@ -585,16 +598,9 @@ function handleCallback() {
   localStorage.setItem('ip2_token', t);
   localStorage.setItem('ip2_expiry', exp);
   const state = h.get('state');
-  // Popup flow (full auth)
   if (state === 'userscript' && window.opener) {
     window.opener.postMessage({ type: 'inbox-pause-token', token: t }, '*');
     setTimeout(() => window.close(), 400);
-    return true;
-  }
-  // Silent popup refresh flow (Google blocks iframes, so we use a 1×1 popup)
-  if (state === 'userscript-silent' && window.opener) {
-    window.opener.postMessage({ type: 'inbox-pause-token', token: t }, '*');
-    setTimeout(() => window.close(), 200);
     return true;
   }
   history.replaceState(null, '', location.pathname);
